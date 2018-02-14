@@ -1,0 +1,98 @@
+---
+title: "HW5_Jlingle_MSDS6306"
+author: "Jason Lingle"
+date: "February 13, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## HW - Unit 5
+
+### 1. Data Munging
+a.	First, import the .txt file into R so you can process it.  Keep in mind this is not a CSV file.  You might have to open the file to see what you're dealing with.  Assign the resulting data frame to an object, df, that consists of three columns with human-readable column names for each.
+
+```{r echo=TRUE}
+df <-read.table("yob2016.txt",sep=";", header=FALSE)
+library(dplyr)
+names(df) <- c("First_Name", "Gender", "Number_Children")
+
+```
+
+b.	Display the summary and structure of df
+
+```{r echo=TRUE}
+summary(df)
+dim(df)
+str(df)
+```
+c.	Your client tells you that there is a problem with the raw file.  One name was entered twice and misspelled.  The client cannot remember which name it is; there are thousands he saw! But he did mention he accidentally put three y's at the end of the name.  Write an R command to figure out which name it is and display it.
+
+```{r echo=TRUE}
+grep("yyy+", df$First_Name, value = TRUE)
+grep("yyy+", df$First_Name, value = FALSE)
+
+```
+
+d.	Upon finding the misspelled name, please remove this particular observation, as the client says it's redundant.  Save the remaining dataset as an object: y2016 
+
+```{r echo=TRUE}
+y2016 <- subset(df, First_Name != "Fionayyy")
+y2016$Year <- 2016
+```
+
+### 2. Data Merging
+a.	Like 1a, please import the .txt file into R.  Look at the file before you do.  You might have to change some options to import it properly.  Again, please give the dataframe human-readable column names.  Assign the dataframe to y2015.  
+
+```{r echo=TRUE}
+y2015 <-read.table("yob2015.txt",sep=",", header=FALSE)
+names(y2015) <- c("First_Name", "Gender", "Number_Children")
+y2015$year <- 2015
+```
+
+b.	Display the last ten rows in the dataframe.  Describe something you find interesting about these 10 rows.
+
+Each of these names in the last 10 rows is for a Male with 5 observations which suggestions that there may be an issue with those rows.
+
+```{r echo=TRUE}
+tail(y2015,10)
+
+```
+
+c.	Merge y2016 and y2015 by your Name column; assign it to final.  The client only cares about names that have data for both 2016 and 2015; there should be no NA values in either of your amount of children rows after merging.
+
+```{r echo=TRUE}
+final <- merge(x=y2015, y=y2016, union("First_Name","Gender"), all=FALSE)
+```
+
+
+### 3. Data Summary
+a.	Create a new column called "Total" in final that adds the amount of children in 2015 and 2016 together.  In those two years combined, how many people were given popular names?
+
+```{r echo=TRUE}
+library(reshape2)
+final <- transform(final, Total = Number_Children.x + Number_Children.y)
+sum(final$total)
+```
+
+b.	Sort the data by Total.  What are the top 10 most popular names?
+```{r echo=TRUE}
+final <- arrange(final, desc(Total))
+head(final,10)
+```
+c.	The client is expecting a girl!  Omit boys and give the top 10 most popular girl's names.
+
+```{r echo=TRUE}
+final <- subset(final, Gender!= "M")
+final <- arrange(final, desc(Total))
+final <- head(final,10)
+final <- dplyr::select(final,First_Name, Total)
+```
+
+d.	Write these top 10 girl names and their Totals to a CSV file.  Leave out the other columns entirely.
+
+```{r echo=TRUE}
+write.table(final, "topgirlnames.csv", sep = ",", row.names=FALSE)
+```

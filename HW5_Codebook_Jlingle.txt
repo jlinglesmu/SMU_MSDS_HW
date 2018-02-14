@@ -1,0 +1,6 @@
+https://github.com/jlinglesmu/SMU_MSDS_HW
+
+df: Dataframe created by loading yob2016.csv from the working directory.
+y2016: Dataframe created from df, excluding the incorrectly spelled name.
+y2015: Dataframe created by loading yob2015.csv from the working directory.
+final: File created by merging the y2015 and y2016 data frames using name and gender.  A field named total is added to sum the 2015 & 2016 totals for the names.  It is then updated to remove male names from the list and finally remove all but the top 10 female names.

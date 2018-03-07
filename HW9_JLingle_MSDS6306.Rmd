@@ -1,0 +1,99 @@
+---
+title: "Assignment_09"
+author: "Jason Lingle"
+date: "March 7, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+1. Harry Potter Cast (50%)
+a. In the IMDB, there are listings of full cast members for movies. Navigate to http://www.imdb.com/title/tt1201607/fullcredits?ref_=tt_ql_1. Feel free to View Source to get a good idea of what the page looks like in code.
+
+
+
+b. Scrape the page with any R package that makes things easy for you. Of particular interest is the table of the Cast in order of crediting. Please scrape this table (you might have to fish it out of several of the tables from the page) and make it a data.frame() of the Cast in your R environment
+
+```{r, echo=TRUE}
+library(rvest)
+imdb <- read_html("http://www.imdb.com/title/tt1201607/fullcredits?ref_=tt_ql_1/")
+actor <- html_nodes(imdb, "#fullcredits_content span.itemprop")
+actor_trimmed <- html_text(actor)
+
+actor <- html_nodes(imdb, "#fullcredits_content .character")
+character_trimmed <- html_text(actor, trim=TRUE)
+```
+
+c. Clean up the table
+
+```{r, echo=TRUE}
+character_trimmed <- gsub("\n", "", character_trimmed)
+character_trimmed <- gsub("\"","", character_trimmed)
+
+cast_list <- data.frame(actor_trimmed, character_trimmed)
+```
+
+d. Split the Actor's name into two columns: FirstName and Surname. Keep in mind that some actors/actresses have middle names as well. Please make sure that the middle names are in the FirstName column, in addition to the first name (example: given the 2 Actor Frank Jeffrey Stevenson, the FirstName column would say "Frank Jeffrey.")
+
+```{r,echo=FALSE}
+#library(tidyr)
+#tidy_cast <- extract(cast_list, Actor, c("FirstName", "SurName"), "([^ ^]+) (.*)")
+```
+
+e. Present the first 10 rows of the data.frame() - It should have only FirstName, Surname, and Character columns.
+
+```{r, echo=TRUE}
+#cast_list$Character <- gsub("              Professor Filius Flitwick"," Professor Filius #Flitwick",cast_list$Character)
+
+#cast_list$Character <- gsub("               Griphook","Griphook",cast_list$Character)
+head(cast_list,10)
+
+```
+
+2. SportsBall (50%)
+a. On the ESPN website, there are statistics of each NBA player. Navigate to the San Antonio Spurs current statistics (likely http://www.espn.com/nba/team/stats/_/name/sa/san-antonio-spurs). You are interested in the Shooting Statistics table.
+
+```{r, echo=TRUE}
+library(rvest)
+library(XML)
+url <- "http://www.espn.com/nba/team/stats/_/name/sa/san-antonio-spurs"
+shooting = readHTMLTable(url, which = 2, stringsAsFactors = FALSE)
+shooting = readHTMLTable(url, which = 2, stringsAsFactors = FALSE , skip.rows=TRUE,as.data.frame = TRUE)
+colnames(shooting) <- c("PLAYER","FGM","FGA","FG% 3PM","3PA","3P%","FTM","FTA","FT%","2PM","2PA","2P%","PPS","AFG%")
+library(tidyr)
+library(stringr)
+head(shooting,17)
+stats <- shooting %>%  separate(PLAYER, into = c("Name", "Position"), sep = ",")
+```
+
+
+
+b. Scrape the page with any R package that makes things easy for you. There are a few tables on the page, so make sure you are targeting specifically the Shooting Statistics table.
+
+c. Clean up the table (You might get some warnings if you're working with tibbles)
+```{r, echo=TRUE}
+library(dplyr)
+#stats$`FGM` <-as.double(shooting$`FGM`)
+#stats$`FGA` <-as.double(shooting$`FGA`)
+#stats$`FG%` <-as.double(shooting$`FG%`)
+#stats$`3PM` <-as.double(shooting$`3PM`)
+#stats$`3PA` <-as.double(shooting$`3PA`)
+#stats$`3P%` <-as.double(shooting$`3P%`)
+#stats$`FTM` <-as.double(shooting$`FTM`)
+#stats$`FTA` <-as.double(shooting$`FTA`)
+#stats$`FT%` <-as.double(shooting$`FT%`)
+#stats$`2PM` <-as.double(shooting$`2PM`)
+#stats$`2PA` <-as.double(shooting$`2PA`)
+#stats$`2P%` <-as.double(shooting$`2P%`)
+#stats$`PPS` <-as.double(shooting$`PPS`)
+#stats$`AFG%` <-as.double(shooting$`AFG%`)
+
+str(stats)
+stats <-stats[order(stats$Position, decreasing=TRUE), ]
+barplot(t(as.matrix(stats$`FG%`)), col=rep(c("red","blue","green","yellow","orange"),each=5), main="FG % Per Game Per Player", xlab="Player", ylab="Field Goal %", xpd=FALSE,names.arg=stats$Name,cex.names=.6,las=2)
+```
+

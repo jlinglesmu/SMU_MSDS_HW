@@ -1,0 +1,92 @@
+---
+title: "HW10_JLingle_MSDS6306"
+author: "Jason Lingle"
+date: "March 21, 2018"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+##  MSDS 6306: Doing Data Science - Exploratory Data 
+###	1. Mental Health Clinics (40%) 
+a. This data set is a survey of every known healthcare facility that offers mental health services in the United States in 2015. Navigate to https://datafiles.samhsa.gov/study-dataset/national-mental-health-services-survey-2015-n-mhss-2015-ds0001-nid17098 and select the R download. Look through the codebook PDF for an explanation on certain variables. Upon opening the RDA file, the data set should be inserted into your global environment, which you can then reference. 
+
+
+```{r echo=TRUE}
+#MH_Data <- load("C:/MSDS6306/N-MHSS-2015-DS0001-data-r.RDA")
+MH_Data <- read.csv("C:/MSDS6306/N-MHSS-2015-DS0001-data-excel.csv")
+```
+
+b. Please create code which lists the State abbreviations without their counts, one abbreviation per State value. It does not have to in data frame format. A vector is fine. 
+
+```{r echo=TRUE}
+library (sqldf)
+states <- sqldf("select LST from MH_Data group by LST")
+```
+
+	c. Filter the data.frame from 1A. We are only interested in the Veterans Administration (VA) medical centers in the mainland United States-create a listing of counts of these centers by state, including only mainland locations. Alaska, Hawaii, and U.S. territories should be omitted. DC, while not a state, is in the mainland, so it should remain included. Convert this to data.frame() 
+
+```{r echo=TRUE}
+#In the 2015 N-MHSS, the territories included American Samoa, Guam, Puerto Rico, and the U.S. Virgin Islands
+VA_Mainland <- data.frame(sqldf("select LST  as Abbrev, count(FACILITYTYPE) as Facility_Count from MH_Data where FACILITYTYPE='6'and LST not in ('HI','AK','PR','GU','VI') GROUP BY LST"))
+VA_Mainland
+```
+
+	d. Create a ggplot barchart of this filtered data set. Vary the bar's colors by what State it has listed. Give it an appropriately professional title that is centered. Make sure you have informative axis labels. The State axis should be readable, not layered over each other. You're welcome to have a legend or not. 
+	
+```{r echo=TRUE}
+library(ggplot2)
+ggplot(VA_Mainland, aes(x=Abbrev, y=Facility_Count, fill=Abbrev)) + geom_bar(stat="identity") + labs(title="VA Facilities by US Mainland State", x="State Abbreviation", y="VA Facilities") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+###	2. Cleaning and Bringing in New Features (60%) 
+a. This graph (1D) might be somewhat misleading, as bigger states may have more hospitals, but could be more sparsely located. Read statesize.csv into your R environment. This contains essentially a vector of square miles for each state. In trying to merge it with your data.frame() from 1C, you find that they don't match. Use paste() on your LST column in 1C to see what the matter is, and write what you observe in a comment. 
+
+
+```{r echo=TRUE}
+statesize <- read.csv("C:/MSDS6306/statesize.csv")
+mergedVAData<- merge(VA_Mainland, statesize, by = "Abbrev", all = FALSE)
+#mergedVAData
+str(mergedVAData)
+#Abbrev is a Factor
+str(VA_Mainland)
+#State is a CHR data type
+```
+
+	b. Correct the problem with the LST column using any method in R that is programmatic and easily understandable. Once you have made these state abbreviations identical to statesize.csv's Abbrev column, merge the data.frame() from 1C and statesize.csv in order to add size information. 
+
+
+```{r echo=TRUE}
+VA_Mainland$Abbrev <- as.factor(VA_Mainland$Abbrev)
+mergedVAData<- merge(VA_Mainland, statesize, by.VA_Mainland=c("State"), by.statesize=c("Abbrev"), all = FALSE)
+```
+
+c. Calculate a new variable in your combined data.frame() which indicates the VA hospitals per thousand square miles. 
+
+
+
+```{r echo=TRUE}
+mergedVAData$VA_Hosp_Thousand_Miles <- (mergedVAData$Facility_Count/(mergedVAData$SqMiles/1000))
+```
+
+d. Create another ggplot which considers the VAs per square thousand miles, rather than just frequency. 
+. Make sure the State axis is readable, like before. Change the title and axes as appropriate. 
+	. Modify the ggplot syntax to make your bars in descending order (there are StackOverflow topics for this, and I have demonstrated how in Live Coding in prior classes). 
+	. Color-code the bars based on Region (see the merged data.frame)-however, change the color scheme from the default. Any set of colors is fine, so long as it is readable. 
+	. Keep the legend-you should have four regions and therefore four colors. 
+
+
+
+```{r echo=TRUE}
+VA_Per_Region <- sqldf("select Region, sum(VA_Hosp_Thousand_Miles) as VA_Hosp_Thousand_Miles from mergedVAData group by Region")
+ggplot(VA_Per_Region, aes(x=reorder(Region, -VA_Hosp_Thousand_Miles), y=VA_Hosp_Thousand_Miles, fill=Region)) + geom_bar(stat="identity") + scale_fill_brewer(palette="Set1") + labs(title="VA Facilities per Thousand Miles by Region", x="Region", y="VA Facilities Per Thousand Square Miles") + theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+	e. What patterns do you see? By this metric, is there any region that seems relatively high for VA medical centers per thousand square miles? How about low? Given these data, what advice might you give your boss before you start modeling (and why)? 
+
+The Northeast by far has the largest number of VA centers per thousand miles with 6.95 per thousand miles while the Midwest (1.96 per thousand miles), South (2.62 per thousand miles), and West (.514 per thousand miles) are only a combined 5.1 per thousand miles.  The West has by far the lowest number of VA centers per thousand miles.  
+
+While interesting, this information still does not provide insights into whether there are enough medical centers in a specific region or state.  To get a more accurate picture of the needs in each region or state, the number of veterans and current patients in each region should be layered in to identify the number of possible patients per geography (state, region, etc.).  Including the number of current patients might provide insights into whether there are some hospitals that are stretched beyond their abilities.  Adding in the number of veterans in those areas may give insights into whether there are veterans in areas that do not have a center.
